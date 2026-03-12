@@ -4,13 +4,16 @@ import { db } from "@/config/db";
 import { usersTable } from "@/config/schema";
 import { isDatabaseConnectionError, upsertLocalUser } from "@/lib/dbFallback";
 import { eq } from "drizzle-orm";
-import { currentUser } from "@clerk/nextjs/server";
+// Clerk's currentUser commented out — replaced with JWT getCurrentUser()
+// import { currentUser } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
 export async function POST() {
-  const user = await currentUser();
-  const email = user?.primaryEmailAddress?.emailAddress;
-  const name = user?.fullName || user?.firstName || "User";
+  // JWT auth: read user from JWT cookie instead of Clerk session
+  const jwtUser = await getCurrentUser();
+  const email = jwtUser?.email;
+  const name = jwtUser?.name || "User";
 
   if (!email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

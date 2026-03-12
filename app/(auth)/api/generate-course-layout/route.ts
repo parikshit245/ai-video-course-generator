@@ -3,7 +3,9 @@ import { Course_config_prompt } from "@/data/Prompt";
 import { db } from "@/config/db";
 import { coursesTable } from "@/config/schema";
 import { isDatabaseConnectionError, saveLocalCourse } from "@/lib/dbFallback";
-import { currentUser } from "@clerk/nextjs/server";
+// Clerk's currentUser commented out — replaced with JWT getCurrentUser()
+// import { currentUser } from "@clerk/nextjs/server";
+import { getCurrentUser } from "@/lib/auth";
 import { getGeminiModel } from "@/lib/gemini";
 
 type CourseChapter = {
@@ -167,8 +169,11 @@ export async function POST(req: NextRequest) {
     let userEmail = "";
 
     try {
-      const user = await currentUser();
-      userEmail = user?.primaryEmailAddress?.emailAddress || "";
+      // JWT auth: read user email from JWT cookie instead of Clerk's currentUser()
+      // const user = await currentUser();
+      // userEmail = user?.primaryEmailAddress?.emailAddress || "";
+      const user = await getCurrentUser();
+      userEmail = user?.email || "";
     } catch (error) {
       console.warn("Unable to read current user for course generation:", error);
     }

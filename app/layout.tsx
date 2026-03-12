@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { ClerkProvider } from "@clerk/nextjs";
+// ClerkProvider commented out — replaced with JWT authentication
+// import { ClerkProvider } from "@clerk/nextjs";
 import Provider from "./(auth)/provider";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -15,15 +16,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en">
-        <body className="font-sans">
-          <Provider>
-            {children}
-            <Toaster position="top-center" richColors />
-          </Provider>
-        </body>
-      </html>
-    </ClerkProvider>
+    // <ClerkProvider>
+    <html lang="en">
+      <body className="font-sans">
+        <Provider>
+          {children}
+          <Toaster position="top-center" richColors />
+        </Provider>
+      </body>
+    </html>
+    // </ClerkProvider>
   );
 }

@@ -1,12 +1,27 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { SignInButton, UserButton, useUser } from "@clerk/nextjs";
+// Clerk imports commented out — replaced with JWT auth via UserDetailContext
+// import { SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import Image from "next/image";
-import React from "react";
+import React, { useContext } from "react";
+import { UserDetailContext } from "@/context/UserDetailContext";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
 const Header = () => {
-  const { user } = useUser();
+  // JWT auth: read user from context (set by Provider via /api/auth/me)
+  const { userDetail, setUserDetail } = useContext(UserDetailContext);
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await axios.post("/api/auth/logout");
+    setUserDetail(null);
+    router.push("/sign-in");
+    router.refresh();
+  };
+
   return (
     <div className="flex items-center justify-between p-4">
       <div className="flex gap-2 items-center">
@@ -25,12 +40,20 @@ const Header = () => {
         </li>
       </ul>
 
-      {user ? (
-        <UserButton />
+      {userDetail ? (
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-gray-700">
+            {userDetail.name}
+          </span>
+          <Button variant="outline" size="sm" onClick={handleLogout}>
+            Sign Out
+          </Button>
+        </div>
       ) : (
-        <SignInButton mode="modal">
+        // Previously: <SignInButton mode="modal"><Button>Get Started</Button></SignInButton>
+        <Link href="/sign-in">
           <Button>Get Started</Button>
-        </SignInButton>
+        </Link>
       )}
     </div>
   );

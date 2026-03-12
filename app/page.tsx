@@ -1,15 +1,14 @@
 import { Button } from "@/components/ui/button";
-import { UserButton } from "@clerk/nextjs";
+// UserButton from Clerk commented out — using JWT auth via Header component instead
+// import { UserButton } from "@clerk/nextjs";
 import Image from "next/image";
 import Header from "./_components/Header";
 import Hero from "./_components/Hero";
 import CourseList from "./_components/CourseList";
 
-
 export default function Home() {
   return (
     <div>
-
       <Hero />
       <CourseList />
       <div

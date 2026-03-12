@@ -5,25 +5,31 @@ import { UserDetailContext } from "@/context/UserDetailContext";
 import Header from "../_components/Header";
 
 const Provider = ({ children }: { children: React.ReactNode }) => {
-  useEffect(() => {
-    CreateNewUser();
-  }, []);
-
   const [userDetail, setUserDetail] = useState(null);
 
-  const CreateNewUser = async () => {
-    //user API endpoint to create a new user
-    const result = await axios.post("/api/user", {});
-    console.log(result.data);
-    setUserDetail(result?.data);
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
+
+  // JWT auth: fetch user from JWT cookie via /api/auth/me
+  // Previously called POST /api/user using Clerk's currentUser()
+  const fetchCurrentUser = async () => {
+    try {
+      const result = await axios.get("/api/auth/me");
+      setUserDetail(result.data);
+    } catch {
+      // Not authenticated — user stays null
+      setUserDetail(null);
+    }
   };
 
   return (
     <div>
       <UserDetailContext.Provider value={{ userDetail, setUserDetail }}>
         <div className="max-w-7xl mx-auto">
-                <Header/>
-          {children}</div>
+          <Header />
+          {children}
+        </div>
       </UserDetailContext.Provider>
     </div>
   );

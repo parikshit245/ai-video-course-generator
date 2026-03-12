@@ -11,6 +11,8 @@ export const usersTable = pgTable("users", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
   name: varchar({ length: 255 }).notNull(),
   email: varchar({ length: 255 }).notNull().unique(),
+  // JWT auth: password hash stored for credential-based login
+  passwordHash: varchar({ length: 255 }),
   credits: integer().default(2),
 });
 

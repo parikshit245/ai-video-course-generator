@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+// Clerk's useUser commented out — replaced with JWT auth via UserDetailContext
+// import { useUser } from "@clerk/nextjs";
+import { UserDetailContext } from "@/context/UserDetailContext";
 import { Loader2, BookOpen, Clock } from "lucide-react";
 import {
   Card,
@@ -27,10 +29,11 @@ function CourseList() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { user } = useUser();
+  // JWT auth: read user from context instead of Clerk's useUser()
+  const { userDetail } = useContext(UserDetailContext);
 
   useEffect(() => {
-    if (!user) return;
+    if (!userDetail) return;
 
     const fetchCourses = async () => {
       try {
@@ -44,9 +47,9 @@ function CourseList() {
     };
 
     fetchCourses();
-  }, [user]);
+  }, [userDetail]);
 
-  if (!user) {
+  if (!userDetail) {
     return null;
   }
 

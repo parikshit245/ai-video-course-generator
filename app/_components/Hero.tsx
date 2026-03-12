@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import {
   InputGroup,
   InputGroupAddon,
@@ -21,7 +21,9 @@ import { QUICK_VIDEO_SUGGESTIONS } from "@/data/constant";
 import axios from "axios";
 import { AxiosError } from "axios";
 import { toast } from "sonner";
-import { SignInButton, useUser } from "@clerk/nextjs";
+// Clerk imports commented out — replaced with JWT auth via UserDetailContext
+// import { SignInButton, useUser } from "@clerk/nextjs";
+import { UserDetailContext } from "@/context/UserDetailContext";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 
@@ -29,7 +31,8 @@ const Hero = () => {
   const [userInput, setUserInput] = useState("");
   const [type, setType] = useState("full-course");
   const [loading, setLoading] = useState(false);
-  const { user } = useUser();
+  // JWT auth: read user from context instead of Clerk's useUser()
+  const { userDetail } = useContext(UserDetailContext);
   const router = useRouter();
 
   const GenerateCourseLayout = async () => {
@@ -103,29 +106,21 @@ const Hero = () => {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              {user ? (
-                <InputGroupButton
-                  className="ml-auto"
-                  size="icon-sm"
-                  variant="default"
-                  onClick={GenerateCourseLayout}
-                  disabled={loading}
-                >
-                  {loading ? <Loader2 className="animate-spin" /> : <Send />}
-                </InputGroupButton>
-              ) : (
-                <SignInButton mode="modal">
-                  <InputGroupButton
-                    className="ml-auto"
-                    size="icon-sm"
-                    variant="default"
-                    onClick={GenerateCourseLayout}
-                    disabled={loading}
-                  >
-                    {loading ? <Loader2 className="animate-spin" /> : <Send />}
-                  </InputGroupButton>
-                </SignInButton>
-              )}
+              {/* JWT auth: show send button if logged in, redirect to sign-in otherwise */}
+              {/* Previously: <SignInButton mode="modal"> wrapped the button for guests */}
+              <InputGroupButton
+                className="ml-auto"
+                size="icon-sm"
+                variant="default"
+                onClick={
+                  userDetail
+                    ? GenerateCourseLayout
+                    : () => router.push("/sign-in")
+                }
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="animate-spin" /> : <Send />}
+              </InputGroupButton>
             </InputGroupAddon>
           </InputGroup>
         </div>
