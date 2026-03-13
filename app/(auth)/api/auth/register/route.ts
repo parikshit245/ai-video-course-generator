@@ -4,8 +4,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/config/db";
 import { usersTable } from "@/config/schema";
 import { eq } from "drizzle-orm";
-import bcrypt from "bcryptjs";
-import { signToken, setAuthCookie } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   const { email, name, password } = await req.json();
@@ -13,13 +11,6 @@ export async function POST(req: NextRequest) {
   if (!email || !name || !password) {
     return NextResponse.json(
       { error: "Email, name, and password are required" },
-      { status: 400 },
-    );
-  }
-
-  if (password.length < 8) {
-    return NextResponse.json(
-      { error: "Password must be at least 8 characters" },
       { status: 400 },
     );
   }
@@ -36,25 +27,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
-
   const [user] = await db
     .insert(usersTable)
-    .values({ email, name, passwordHash })
+    .values({ email, name, passwordHash: password })
     .returning();
 
-  const token = await signToken({
-    id: user.id,
-    email: user.email,
-    name: user.name,
-  });
-
-  const response = NextResponse.json({
+  return NextResponse.json({
     id: user.id,
     email: user.email,
     name: user.name,
     credits: user.credits,
   });
-  setAuthCookie(response, token);
-  return response;
 }

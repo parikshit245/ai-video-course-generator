@@ -1,25 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/config/db";
 import { coursesTable } from "@/config/schema";
 import { isDatabaseConnectionError, getLocalCourse } from "@/lib/dbFallback";
 import { eq } from "drizzle-orm";
-// Clerk's currentUser commented out — replaced with JWT getCurrentUser()
-// import { currentUser } from "@clerk/nextjs/server";
-import { getCurrentUser } from "@/lib/auth";
+import { getUserEmailFromRequest } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    // JWT auth: read user from JWT cookie instead of Clerk session
-    const user = await getCurrentUser();
+    const userEmail = getUserEmailFromRequest(req);
 
-    if (!user?.email) {
+    if (!userEmail) {
       return NextResponse.json(
         { error: "User not authenticated" },
         { status: 401 },
       );
     }
-
-    const userEmail = user.email;
 
     const courses = await db
       .select()

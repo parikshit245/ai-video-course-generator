@@ -15,17 +15,11 @@ const Header = () => {
   const { userDetail, setUserDetail } = useContext(UserDetailContext);
   const router = useRouter();
 
-  const handleLogout = async () => {
-    await axios.post(
-      "/api/auth/logout",
-      {},
-      {
-        withCredentials: true,
-      },
-    );
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    delete axios.defaults.headers.common["x-user-email"];
     setUserDetail(null);
     router.push("/sign-in");
-    router.refresh();
   };
 
   return (

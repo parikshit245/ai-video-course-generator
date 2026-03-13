@@ -30,22 +30,15 @@ export default function SignUpPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post(
-        "/api/auth/register",
-        {
-          name,
-          email,
-          password,
-        },
-        {
-          withCredentials: true,
-        },
-      );
-
-      const me = await axios.get("/api/auth/me", {
-        withCredentials: true,
+      const result = await axios.post("/api/auth/register", {
+        name,
+        email,
+        password,
       });
-      setUserDetail(me.data);
+      const userData = result.data;
+      localStorage.setItem("user", JSON.stringify(userData));
+      axios.defaults.headers.common["x-user-email"] = userData.email;
+      setUserDetail(userData);
 
       const redirect = searchParams.get("redirect");
       const redirectPath = redirect?.startsWith("/") ? redirect : "/";

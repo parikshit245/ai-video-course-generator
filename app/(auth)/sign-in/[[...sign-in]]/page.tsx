@@ -29,18 +29,11 @@ export default function SignInPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post(
-        "/api/auth/login",
-        { email, password },
-        {
-          withCredentials: true,
-        },
-      );
-
-      const me = await axios.get("/api/auth/me", {
-        withCredentials: true,
-      });
-      setUserDetail(me.data);
+      const result = await axios.post("/api/auth/login", { email, password });
+      const userData = result.data;
+      localStorage.setItem("user", JSON.stringify(userData));
+      axios.defaults.headers.common["x-user-email"] = userData.email;
+      setUserDetail(userData);
 
       const redirect = searchParams.get("redirect");
       const redirectPath = redirect?.startsWith("/") ? redirect : "/";

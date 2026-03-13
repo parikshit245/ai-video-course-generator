@@ -3,29 +3,30 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { UserDetailContext } from "@/context/UserDetailContext";
 import Header from "../_components/Header";
-import { usePathname } from "next/navigation";
 
 const Provider = ({ children }: { children: React.ReactNode }) => {
   const [userDetail, setUserDetail] = useState(null);
-  const pathname = usePathname();
 
   useEffect(() => {
-    fetchCurrentUser();
-  }, [pathname]);
-
-  // JWT auth: fetch user from JWT cookie via /api/auth/me
-  // Previously called POST /api/user using Clerk's currentUser()
-  const fetchCurrentUser = async () => {
-    try {
-      const result = await axios.get("/api/auth/me", {
-        withCredentials: true,
-      });
-      setUserDetail(result.data);
-    } catch {
-      // Not authenticated — user stays null
-      setUserDetail(null);
+    const saved = localStorage.getItem("user");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setUserDetail(parsed);
+        axios.defaults.headers.common["x-user-email"] = parsed.email;
+      } catch {
+        localStorage.removeItem("user");
+      }
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (userDetail?.email) {
+      axios.defaults.headers.common["x-user-email"] = userDetail.email;
+    } else {
+      delete axios.defaults.headers.common["x-user-email"];
+    }
+  }, [userDetail]);
 
   return (
     <div>
