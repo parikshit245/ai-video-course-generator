@@ -4,8 +4,15 @@ import axios from "axios";
 import { UserDetailContext } from "@/context/UserDetailContext";
 import Header from "../_components/Header";
 
+type UserDetail = {
+  id: number;
+  email: string;
+  name: string;
+  credits?: number;
+};
+
 const Provider = ({ children }: { children: React.ReactNode }) => {
-  const [userDetail, setUserDetail] = useState(null);
+  const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("user");

@@ -158,7 +158,7 @@ function CoursePreview() {
               { once: true },
             );
 
-            audio.src = slide.audioFileUrl;
+            audio.src = `/api/audio/${slide.slideId}`;
             audio.load();
           });
         } catch (error) {

@@ -16,7 +16,7 @@ type CaptionChunk = {
 type Slide = {
   slideId: string;
   html: string;
-  audioFileUrl: string; // Direct S3 URL
+  audioFileUrl: string;
   revealData?: string[]; // Array of reveal IDs: ["r1", "r2", "r3"]
   caption?: {
     chunks: CaptionChunk[];
@@ -114,8 +114,8 @@ const SlideIFrameWithReveal = ({ slide }: { slide: Slide }) => {
         style={{ width: 1280, height: 720, border: "none" }}
       />
 
-      {/* Use S3 URL directly for audio */}
-      <Audio src={slide.audioFileUrl} />
+      {/* Always stream via our API route so private S3/local storage both work */}
+      <Audio src={`/api/audio/${slide.slideId}`} />
     </AbsoluteFill>
   );
 };
