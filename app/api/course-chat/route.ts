@@ -20,6 +20,19 @@ import {
   getMessages,
 } from "@/services/chat.service";
 
+type ChatHistoryMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+const buildConversationHistory = (messages: ChatHistoryMessage[]) =>
+  messages
+    .slice(-8)
+    .map((message) =>
+      `${message.role === "user" ? "User" : "Assistant"}: ${message.content}`,
+    )
+    .join("\n");
+
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   if (!userId) return unauthorized();
@@ -53,15 +66,20 @@ export async function POST(req: NextRequest) {
     });
 
     const contextBlock = buildCourseContextBlock(snapshot, ragResult.matches);
+    const conversationHistory = buildConversationHistory(
+      await getMessages(userId, conversation.id),
+    );
 
     const model = getGenerationModel({
       provider: "local-ai",
       temperature: 0.2,
       model: "mistral:latest",
+      responseFormat: "text",
     });
 
     const prompt = `You are a helpful course tutor inside an AI video course app.
 Answer using only the course context below.
+Use the recent conversation only to understand follow-up intent; do not treat it as source material.
 If the context is not enough, say you do not have enough course information.
 Keep the answer concise, practical, and friendly.
 Format your response exactly like this:
@@ -74,6 +92,9 @@ Next Step: <single actionable suggestion>
 
 COURSE CONTEXT:
 ${contextBlock}
+
+RECENT CONVERSATION:
+${conversationHistory || "No previous messages."}
 
 USER QUESTION:
 ${body.question}

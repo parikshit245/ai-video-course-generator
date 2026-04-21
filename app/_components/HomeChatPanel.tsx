@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { Bot, Cpu, Database, FileUp, Loader2, MessageCircleQuestion, Send } from "lucide-react";
-
+import {
+  Bot,
+  Cpu,
+  Database,
+  FileUp,
+  Loader2,
+  MessageCircleQuestion,
+  Paperclip,
+  Send,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -25,7 +34,25 @@ type Message = {
 };
 
 const initialMessage =
-  "Hi! Ask about any saved topic. If IBEX has no memory for it yet, upload a PDF and I will index it for future questions.";
+  "Hi! Upload a PDF or ask about a saved topic. I will answer using indexed knowledge and keep the conversation going.";
+
+const deriveTopicNameFromFile = (fileName: string) =>
+  fileName
+    .replace(/\.pdf$/i, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError(error)) {
+    const serverMessage = error.response?.data?.error;
+    if (typeof serverMessage === "string" && serverMessage.trim()) {
+      return serverMessage;
+    }
+  }
+
+  return fallback;
+};
 
 function HomeChatPanel() {
   const { userId } = useAuth();
@@ -45,12 +72,14 @@ function HomeChatPanel() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showUploadPanel, setShowUploadPanel] = useState(true);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [pineconeAvailable, setPineconeAvailable] = useState<boolean | null>(
     null,
   );
   const [namespace, setNamespace] = useState<string | null>(null);
   const [indexMessage, setIndexMessage] = useState<string | null>(null);
+  const endRef = useRef<HTMLDivElement | null>(null);
 
   const requireSignIn = () => {
     if (userId) {
@@ -88,6 +117,12 @@ function HomeChatPanel() {
       void loadChatHistory(conversationId);
     }
   }, [conversationId, open]);
+
+  useEffect(() => {
+    if (open) {
+      endRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [loading, messages, open, uploading]);
 
   const askQuestion = async () => {
     const topic = topicName.trim();
@@ -135,8 +170,10 @@ function HomeChatPanel() {
         ...prev,
         {
           role: "assistant",
-          content:
+          content: getErrorMessage(
+            error,
             "I could not process that question right now. Please try again.",
+          ),
         },
       ]);
     } finally {
@@ -145,13 +182,17 @@ function HomeChatPanel() {
   };
 
   const uploadPdf = async () => {
-    const topic = topicName.trim();
+    const topic =
+      topicName.trim() ||
+      (selectedFile ? deriveTopicNameFromFile(selectedFile.name) : "");
 
-    if (!topic || !selectedFile || uploading || requireSignIn()) {
+    if (!selectedFile || uploading || requireSignIn()) {
       return;
     }
 
     setUploading(true);
+    setTopicName(topic);
+    setIndexMessage(null);
 
     try {
       const formData = new FormData();
@@ -159,7 +200,12 @@ function HomeChatPanel() {
       formData.append("file", selectedFile);
 
       const response = await axios.post("/api/rag-upload-pdf", formData);
+      const uploadedTopicName =
+        typeof response.data?.topicName === "string"
+          ? response.data.topicName
+          : topic;
 
+      setTopicName(uploadedTopicName);
       setNeedUpload(false);
       setPineconeAvailable(Boolean(response.data?.indexed));
       setNamespace(
@@ -176,10 +222,11 @@ function HomeChatPanel() {
           role: "assistant",
           content:
             response.data?.message ||
-            "PDF uploaded and indexed. Ask your question again.",
+            "PDF uploaded and indexed. Ask your question now.",
         },
       ]);
       setSelectedFile(null);
+      setShowUploadPanel(false);
       setFileInputKey((current) => current + 1);
     } catch (error) {
       console.error("PDF upload failed:", error);
@@ -187,8 +234,10 @@ function HomeChatPanel() {
         ...prev,
         {
           role: "assistant",
-          content:
+          content: getErrorMessage(
+            error,
             "I could not upload this PDF. Please check the file and try again.",
+          ),
         },
       ]);
     } finally {
@@ -208,6 +257,7 @@ function HomeChatPanel() {
     ]);
     setNeedUpload(false);
     setSelectedFile(null);
+    setShowUploadPanel(true);
     setFileInputKey((current) => current + 1);
     setNamespace(null);
     setIndexMessage(null);
@@ -227,9 +277,9 @@ function HomeChatPanel() {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="right"
-          className="w-full border-border bg-background p-0 sm:max-w-lg"
+          className="flex h-screen w-full flex-col gap-0 border-border bg-background p-0 sm:max-w-lg"
         >
-          <SheetHeader className="border-b border-border bg-white px-5 py-5 pr-12">
+          <SheetHeader className="shrink-0 border-b border-border bg-white px-5 py-4 pr-12">
             <SheetTitle className="flex items-center gap-2 text-xl text-slate-950">
               <Bot className="text-indigo-500" size={20} />
               Topic chat
@@ -250,9 +300,9 @@ function HomeChatPanel() {
             ) : null}
           </SheetHeader>
 
-          <div className="flex h-[calc(100vh-84px)] flex-col">
-            <div className="space-y-4 border-b border-border bg-white px-4 py-4">
-              <div className="space-y-2">
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="max-h-[42vh] shrink-0 space-y-3 overflow-y-auto border-b border-border bg-white px-4 py-3">
+              <div className="space-y-1.5">
                 <label
                   htmlFor="topic-name"
                   className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400"
@@ -262,8 +312,11 @@ function HomeChatPanel() {
                 <Input
                   id="topic-name"
                   value={topicName}
-                  onChange={(event) => setTopicName(event.target.value)}
-                  placeholder="Topic name, for example react-basics"
+                  onChange={(event) => {
+                    setTopicName(event.target.value);
+                    setIndexMessage(null);
+                  }}
+                  placeholder="Topic name, or let the PDF name fill this"
                 />
               </div>
 
@@ -281,7 +334,10 @@ function HomeChatPanel() {
                       : "Vector memory unavailable"}
                 </span>
                 {namespace ? (
-                  <span className="rounded-full border border-border bg-slate-50 px-3 py-1 text-slate-600">
+                  <span
+                    className="max-w-full truncate rounded-full border border-border bg-slate-50 px-3 py-1 text-slate-600"
+                    title={namespace}
+                  >
                     Namespace: {namespace}
                   </span>
                 ) : null}
@@ -296,40 +352,91 @@ function HomeChatPanel() {
                 <p className="text-sm text-slate-500">{indexMessage}</p>
               ) : null}
 
-              {needUpload ? (
-                <div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
-                  <p className="text-sm leading-6 text-amber-800">
-                    No indexed knowledge exists for this topic yet. Upload a PDF
-                    and IBEX will chunk and store it for future retrieval.
+              {showUploadPanel || needUpload || selectedFile ? (
+                <div
+                  className={`space-y-3 rounded-lg border px-4 py-3 ${
+                    needUpload
+                      ? "border-amber-200 bg-amber-50"
+                      : "border-border bg-slate-50"
+                  }`}
+                >
+                  <p
+                    className={`text-sm leading-6 ${
+                      needUpload ? "text-amber-800" : "text-slate-600"
+                    }`}
+                  >
+                    {needUpload
+                      ? "No indexed knowledge exists for this topic yet. Upload a PDF and I will chunk it into Pinecone memory."
+                      : "Upload a PDF to create or update this knowledge space."}
                   </p>
                   <input
                     key={fileInputKey}
                     type="file"
                     accept="application/pdf"
-                    onChange={(event) =>
-                      setSelectedFile(event.target.files?.[0] ?? null)
-                    }
-                    className="block w-full rounded-xl border border-amber-200 bg-white px-4 py-2 text-sm text-slate-600 file:mr-4 file:border-0 file:bg-transparent file:text-sm file:font-medium"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      setSelectedFile(file);
+
+                      if (file && !topicName.trim()) {
+                        setTopicName(deriveTopicNameFromFile(file.name));
+                      }
+                    }}
+                    className={`block w-full rounded-lg border bg-white px-4 py-2 text-sm text-slate-600 file:mr-4 file:border-0 file:bg-transparent file:text-sm file:font-medium ${
+                      needUpload ? "border-amber-200" : "border-border"
+                    }`}
                   />
+                  {selectedFile ? (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-white px-3 py-2 text-sm text-slate-600">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <Paperclip className="size-4 shrink-0 text-indigo-500" />
+                        <span className="truncate">{selectedFile.name}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedFile(null);
+                          setFileInputKey((current) => current + 1);
+                        }}
+                        className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                        aria-label="Remove selected PDF"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
+                  ) : null}
                   <div className="flex justify-end">
                     <Button
                       type="button"
                       onClick={() => void uploadPdf()}
-                      disabled={uploading || !topicName.trim() || !selectedFile}
+                      disabled={uploading || !selectedFile}
                     >
                       {uploading ? (
                         <Loader2 className="size-4 animate-spin" />
                       ) : (
                         <FileUp className="size-4" />
                       )}
-                      Upload PDF
+                      {uploading ? "Indexing..." : "Upload PDF"}
                     </Button>
                   </div>
                 </div>
-              ) : null}
+              ) : (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-slate-50 px-3 py-2">
+                  <p className="min-w-0 truncate text-sm text-slate-600">
+                    Ready. Ask below, or add another PDF.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowUploadPanel(true)}
+                  >
+                    Add PDF
+                  </Button>
+                </div>
+              )}
             </div>
 
-            <ScrollArea className="flex-1 px-4 py-4">
+            <ScrollArea className="min-h-0 flex-1 px-4 py-4">
               <div className="space-y-4 pr-2">
                 {messages.map((message, index) => (
                   <div
@@ -339,7 +446,7 @@ function HomeChatPanel() {
                     }`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                      className={`max-w-[85%] rounded-lg px-4 py-3 text-sm leading-relaxed ${
                         message.role === "user"
                           ? "bg-indigo-600 text-white"
                           : "border border-border bg-white text-slate-700"
@@ -354,21 +461,27 @@ function HomeChatPanel() {
 
                 {loading ? (
                   <div className="flex justify-start">
-                    <div className="inline-flex items-center gap-2 rounded-2xl border border-border bg-white px-4 py-3 text-sm text-slate-600">
+                    <div className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-4 py-3 text-sm text-slate-600">
                       <Loader2 className="size-4 animate-spin text-indigo-500" />
                       Searching topic memory...
                     </div>
                   </div>
                 ) : null}
+
+                <div ref={endRef} />
               </div>
             </ScrollArea>
 
-            <div className="space-y-3 border-t border-border bg-white p-4">
+            <div className="shrink-0 space-y-3 border-t border-border bg-white p-4">
               <Textarea
                 value={question}
                 onChange={(event) => setQuestion(event.target.value)}
-                placeholder="Ask anything about the selected topic..."
-                className="min-h-28 resize-none"
+                placeholder={
+                  topicName.trim()
+                    ? `Ask about ${topicName.trim()}...`
+                    : "Ask anything about the selected topic..."
+                }
+                className="min-h-20 resize-none"
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();

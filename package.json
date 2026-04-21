@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test tests/forum.service.test.ts"
+    "test": "tsx --test tests/forum.service.test.ts",
+    "precheck:aws": "node scripts/aws-precheck.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.989.0",
@@ -44,6 +45,7 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@remotion/cli": "4.0.407",
+    "@types/pg": "^8.20.0",
     "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -58,6 +60,7 @@
     "next-themes": "^0.4.6",
     "openai": "^6.27.0",
     "pdf-parse": "^2.4.5",
+    "pg": "^8.20.0",
     "react": "19.2.3",
     "react-day-picker": "^9.13.0",
     "react-dom": "19.2.3",

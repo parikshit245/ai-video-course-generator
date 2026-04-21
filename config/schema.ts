@@ -94,6 +94,26 @@ export const documentsTable = pgTable("documents", {
   createdAt: timestamp().defaultNow().notNull(),
 });
 
+export const audioMetadataTable = pgTable(
+  "audio_metadata",
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    userId: varchar({ length: 255 })
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    fileName: varchar({ length: 255 }).notNull(),
+    s3Key: varchar({ length: 1024 }).notNull().unique(),
+    url: varchar({ length: 1024 }).notNull(),
+    contentType: varchar({ length: 255 }).notNull(),
+    sizeBytes: integer().notNull(),
+    createdAt: timestamp().defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("audio_metadata_user_id_idx").on(table.userId),
+    createdAtIdx: index("audio_metadata_created_at_idx").on(table.createdAt),
+  }),
+);
+
 export const forumThreadsTable = pgTable(
   "forum_threads",
   {
